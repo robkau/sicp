@@ -31,7 +31,6 @@
       ))
 
 
-
 ;; Newton's square root calculation
 (define (sqrt-iter guess previous-guess x)
   (if (good-enough? guess previous-guess)
@@ -143,6 +142,8 @@
 
 
 
+
+
 ;; Exercise 1.16
 ;; Design a procedure for iterative exponentiation using log(n) steps
 ;; This version using recursion is O (logn) steps and O(logn) space.
@@ -150,6 +151,8 @@
   (cond ((= n 0) 1)
         ((even? n) (square (fast-expt b (/ n 2))))
         (else (* b (fast-expt b (- n 1))))))
+
+
 ;; This version using recursive iteration is o (logn) steps and o(1) space.
 (define (fast-expt-iter b n)
   (define (fast-expt-iter-inner b n a)
@@ -176,6 +179,8 @@
 
 ;; Exercise 1.18
 ;; todo russian peasant multiplication using 2 above.
+
+
 
 
 
@@ -226,12 +231,12 @@
   (define (fib-mem-iter a b p q count)
     (cond ((<= count 0) b ) ;; finished enough iterations. return the computed result.
           ((not (even? count)) (fib-mem-iter   ;; need to decrement by one, standard fibonacci step.
-                            (+ (* b p) (* a p) (* a q))
-                            (+ (* b p) (* a q))
-                            p
-                            q
-                            (- count 1)
-                            ))
+                                (+ (* b p) (* a p) (* a q))
+                                (+ (* b p) (* a q))
+                                p
+                                q
+                                (- count 1)
+                                ))
           (else (fib-mem-iter       ;; opportunity to apply squared fibonnaci transformation and cut n in half.
                  a
                  b
@@ -251,7 +256,7 @@
   (define (fib-iter-inner a b n)
     (cond ((= n 0) a)
           (else (fib-iter-inner (+ a b) a (- n 1)))
-      )
+          )
     )
   (fib-iter-inner 1 0 n)
   )
@@ -266,7 +271,7 @@
 ;; Compare fibonnaci implementations
 (define (fib-combined n)
   (display-all (fib n) " "(fib-mem n) " "(fib-slow n))
-)
+  )
 
 
 ;; 1.2.5 Greatest Common Divisors
@@ -284,10 +289,23 @@
 (define (smallest-divisor n)
   (find-divisor n 2))
 
+(define (next n)
+  (if
+   (= n 2)
+   (+ n 1)
+   (+ n 2)
+   )
+  )
+
 (define (find-divisor n test-divisor)
-  (cond ((> (square test-divisor) n) n)
-        ((divides? test-divisor n) test-divisor)
-        (else (find-divisor n (+ test-divisor 1)))))
+  (cond ((> (square test-divisor) n) n)                 ; over maximum possible
+        ((divides? test-divisor n) test-divisor)        ; found smallest
+        (else (find-divisor n (next test-divisor)))     ; try next
+        ))
+
+
+
+               
 
 (define (divides? a b)
   (= (remainder b a) 0))
@@ -295,11 +313,119 @@
 (define (prime? n)
   (= n (smallest-divisor n)))
 
+
+
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m))
+                    m))
+        (else
+         (remainder (* base (expmod base(- exp 1) m))
+                    m))
+        )
+  )
+
+
 ;; Fermats little theorem
 ;; Probabilistic prime determination
 ;; (Chance for error is less than a cosmic ray flipping a bit during calculation, says the book)
 ;; A false positive number is a Carmichael number  (561, 1105, 1729, 2465, ...)
 ; Only 255 below 100,000,000
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n ) a ))
+  (try-it (+ 1 (random (- n 1)))))
+
+
+
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+        ((fermat-test n) (fast-prime? n (- times 1 )))
+        (else false))
+  )
+
+
+;; Exercise 1.21: Use the smallest-divisor procedure to find the result for 199, 1999, 19999
+; (smallest-divisor 199) 199
+; (smallest-divisor 1999) 1999
+; (smallest-divisor 19999) 7
+
+
+;; Exercise 1.22 Using runtime primitive to measure how logn to find primes.
+;; timed-prime-test takes integer n , prints n, and if n is prime prints three asterisks and the runtime.
+;; Write procedure search-for-primes to find the first 3 primes larger than n, testing odd numbers only. compare if 10,100,1000... follows sqrt(10) order of growth in runtime , matching number of calculation steps.
+(define (timed-prime-test n)
+  (start-prime-test n (runtime))
+  )
+
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (and
+       (report-prime n (- (runtime) start-time))
+       #t      
+       )
+      #f
+      ))
+
+(define (report-prime n elapsed-time)
+  (display n)
+  (display " *** ")
+  (display elapsed-time)
+  (newline)
+  )
+
+
+(define (search-for-primes n)
+  (define (search-for-primes-iter n at)
+    (cond ((>= at 3))
+          ((even? n) (search-for-primes-iter (+ n 1) at))
+          (else
+           (if
+            (timed-prime-test n)
+            (search-for-primes-iter (+ n 2) (+ at 1))
+            (search-for-primes-iter (+ n 2) at)
+            )
+           )))
+  (search-for-primes-iter n 0))
+#| 
+   > (search-for-primes 10000000000)
+   10000000019 *** 13889
+   10000000033 *** 12805
+   10000000061 *** 13236
+   #t
+   > (search-for-primes 100000000000)
+   100000000003 *** 50850
+   100000000019 *** 36199
+   100000000057 *** 32890
+   #t
+   > (search-for-primes 1000000000000)
+   1000000000039 *** 108846
+   1000000000061 *** 103993
+   1000000000063 *** 101746 |#
+;; Conclusion: sqrt(10) is about 3 and each order of magnitude increases runtime by about 3x. So time matches number of operations performed.
+
+
+;; Exercise 1.23
+;; smallest-divisor function from earlier does a lot of needless checking.
+;; it can be improved to only check odd numbers, after '2' has been checked.
+;; implement this change and check if results from ex1.22 are twice as fast.
+;; old time:
+;; > (search-for-primes 1000000000)
+;; 1000000007 *** 15071
+;; 1000000009 *** 3323
+;; 1000000021 *** 5080
+;; new time:
+;; > (search-for-primes 1000000000)
+;; 1000000007 *** 930
+;; 1000000009 *** 932
+;; 1000000021 *** 932
+;; it is even more than twice as fast. 
+
+
+
+
+;; Exercise 1.24
 
 
 
@@ -307,7 +433,18 @@
 
 
 
-ß∫
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
