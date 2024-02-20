@@ -327,6 +327,8 @@
   )
 
 
+
+
 ;; Fermats little theorem
 ;; Probabilistic prime determination
 ;; (Chance for error is less than a cosmic ray flipping a bit during calculation, says the book)
@@ -360,7 +362,7 @@
   )
 
 (define (start-prime-test n start-time)
-  (if (prime? n)
+  (if (fast-prime? n 5)
       (and
        (report-prime n (- (runtime) start-time))
        #t      
@@ -402,9 +404,10 @@
    > (search-for-primes 1000000000000)
    1000000000039 *** 108846
    1000000000061 *** 103993
-   1000000000063 *** 101746 |#
-;; Conclusion: sqrt(10) is about 3 and each order of magnitude increases runtime by about 3x. So time matches number of operations performed.
+   1000000000063 *** 101746 
 
+   Conclusion: sqrt(10) is about 3 and each order of magnitude increases runtime by about 3x. So time matches number of operations performed.
+|#
 
 ;; Exercise 1.23
 ;; smallest-divisor function from earlier does a lot of needless checking.
@@ -424,31 +427,125 @@
 
 
 
-
-;; Exercise 1.24
-
-
-
-
+#|
+   Exercise 1.24
+   Modify the timed-prime-test procedure from ex1.22 to use fast-prime? (Fermat method) and compare the speed to prime?.
+   Since fermat test has logn growth does it match expectations?
 
 
+ prime? speed:
+> (search-for-primes 100000000)
+100000007 *** 2190
+100000037 *** 254
+100000039 *** 256
+> (search-for-primes 1000000000)
+1000000007 *** 1580
+1000000009 *** 9625
+1000000021 *** 2760
+
+ fast-prime? speed with 5 iters:
+> (search-for-primes 100000000)
+100000007 *** 38
+100000037 *** 39
+100000039 *** 38
+> (search-for-primes 1000000000)
+1000000007 *** 16
+1000000009 *** 16
+1000000021 *** 14
+
+- fast-prime? is from 5x to 500x faster.
+- fast-prime? actually gets faster after adding a zero and computing bigger primes? Not sure why.
+- fast-prime? can't compute larger values. unlike prime? version, because the (random) func limits the input size and fast-prime? uses (random).
+|#
+
+
+
+
+#|
+Exercise 1.25
+Can expmod function replace all its internal code by calling (remainder (fast-expt base exp) m) ?
+|#
+(define (expmod-1-25 base exp m)
+  (remainder (fast-expt base exp) m)
+  )
+;; Original version computed primes in the millions in milliseconds, this one hung for over 10 seconds.
+;; This version computes the biggest numbers in full in memory, old version breaks it down into smaller calculations and never renders the biggest number in mem.
 
 
 
 
 
+#|
+Exercise 1.26
+Why is this version of expmod replacing (square x) with (* x x) changing it from O(logn) to O(n)?
+|#
+(define (expmod-slow base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder
+          (* (expmod-slow base (/ exp 2) m)
+             (expmod-slow base (/ exp 2) m))
+          m))
+        (else
+         (remainder
+          (* base
+             (expmod-slow base (- exp 1) m))
+          m))))
+;; Because both arguments to (* x x) are both evaluated on each recursive call. 
+
+
+#|
+Exercise 1.27
+Demonstrate that the Carmichael numbers listed in Footnote 47 really do fool the Fermat test.
+That is, write a procedure that takes an integer n and tests whether a^n is congruent to a modulo n for every a<n,
+and try your procedure on the given Carmichael numbers.
+|#
+(define (carmichael-num? n)
+  (define (carmichael-num-iter n b)
+    (cond
+      ((>= b n) #t)
+      ((= (expmod b n n) b) (carmichael-num-iter n (+ b 1)))
+      (else #f) 
+      )
+    )
+  (carmichael-num-iter n 1)
+  )
+;(display (carmichael-num? 561)) (newline)
+;(display (carmichael-num? 1105)) (newline)
+;(display (carmichael-num? 1729)) (newline)
+;(display (carmichael-num? 2465)) (newline)
+;(display (carmichael-num? 2821)) (newline)
+;(display (carmichael-num? 6601)) (newline)
 
 
 
+#|
+Exercise 1.28
+Miller-Rabin test.
+One variant of the Fermat test that cannot be fooled is called the Miller-Rabin test (Miller 1976; Rabin 1980). 
+This starts from an alternate form of Fermat’s Little Theorem, which states that:
+ if n is a prime number and a is any positive integer less than n,
+ then a raised to the (n-1)-st power is congruent to 1 modulo n.
 
+To test the primality of a number n by the Miller-Rabin test,
+we pick a random number a<n and raise a to the (n-1)-st power modulo n using the expmod procedure.
 
+However, whenever we perform the squaring step in expmod,
+we check to see if we have discovered a “nontrivial square root of 1 modulo n,”
+that is, a number not equal to 1 or n-1 whose square is equal to 1 modulo n.
 
+It is possible to prove that if such a nontrivial square root of 1 exists, then n is not prime.
 
+It is also possible to prove that if n is an odd number that is not prime, then, for at least half the numbers a<n,
+computing an-1 in this way will reveal a nontrivial square root of 1 modulo n.
+(This is why the Miller-Rabin test cannot be fooled.)
 
+Modify the expmod procedure to signal if it discovers a nontrivial square root of 1,
+and use this to implement the Miller-Rabin test with a procedure analogous to fermat-test.
 
-
-
-
+Check your procedure by testing various known primes and non-primes.
+Hint: One convenient way to make expmod signal is to have it return 0.
+|#
 
 
 
