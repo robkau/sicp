@@ -281,7 +281,7 @@
 ;; r = remainder(a,b)
 (define (gcd a b)
   (if (= b 0)
-      a
+      (abs a)
       (gcd b (remainder a b))))
 
 
@@ -305,7 +305,7 @@
 
 
 
-               
+
 
 (define (divides? a b)
   (= (remainder b a) 0))
@@ -365,7 +365,7 @@
   (if (fast-prime? n 5)
       (and
        (report-prime n (- (runtime) start-time))
-       #t      
+       #t
        )
       #f
       ))
@@ -390,7 +390,7 @@
             )
            )))
   (search-for-primes-iter n 0))
-#| 
+#|
    > (search-for-primes 10000000000)
    10000000019 *** 13889
    10000000033 *** 12805
@@ -404,7 +404,7 @@
    > (search-for-primes 1000000000000)
    1000000000039 *** 108846
    1000000000061 *** 103993
-   1000000000063 *** 101746 
+   1000000000063 *** 101746
 
    Conclusion: sqrt(10) is about 3 and each order of magnitude increases runtime by about 3x. So time matches number of operations performed.
 |#
@@ -423,7 +423,7 @@
 ;; 1000000007 *** 930
 ;; 1000000009 *** 932
 ;; 1000000021 *** 932
-;; it is even more than twice as fast. 
+;; it is even more than twice as fast.
 
 
 
@@ -491,7 +491,7 @@ Why is this version of expmod replacing (square x) with (* x x) changing it from
           (* base
              (expmod-slow base (- exp 1) m))
           m))))
-;; Because both arguments to (* x x) are both evaluated on each recursive call. 
+;; Because both arguments to (* x x) are both evaluated on each recursive call.
 
 
 #|
@@ -505,7 +505,7 @@ and try your procedure on the given Carmichael numbers.
     (cond
       ((>= b n) #t)
       ((= (expmod b n n) b) (carmichael-num-iter n (+ b 1)))
-      (else #f) 
+      (else #f)
       )
     )
   (carmichael-num-iter n 1)
@@ -522,7 +522,7 @@ and try your procedure on the given Carmichael numbers.
 #|
 Exercise 1.28
 Miller-Rabin test.
-One variant of the Fermat test that cannot be fooled is called the Miller-Rabin test (Miller 1976; Rabin 1980). 
+One variant of the Fermat test that cannot be fooled is called the Miller-Rabin test (Miller 1976; Rabin 1980).
 This starts from an alternate form of Fermat’s Little Theorem, which states that:
  if n is a prime number and a is any positive integer less than n,
  then a raised to the (n-1)-st power is congruent to 1 modulo n.
@@ -548,5 +548,363 @@ Hint: One convenient way to make expmod signal is to have it return 0.
 |#
 
 
+;; ============================================
+;; Chapter 2: Building Abstractions with Data
+;; ============================================
 
+
+;; Basic operations over rationals given n1/d1 and n2/d2 as two rationals
+
+;; (n1d2 + n2d1) / d1d2
+(define (add-rat x y)
+  (make-rat (+ (* (numer x) (denom y))
+               (* (numer y) (denom x)))
+            (* (denom x) (denom y))))
+
+;; (n1d2 - n2d1) / d1d2
+(define (sub-rat x y)
+  (make-rat (- (* (numer x) (denom y))
+               (* (numer y) (denom x)))
+            (* (denom x) (denom y))))
+
+;; n1n2/d1d2
+(define (mul-rat x y)
+  (make-rat (* (numer x) (numer y))
+            (* (denom x) (denom y))))
+
+
+;; n1d2/d1n2
+(define (div-rat x y)
+  (make-rat (* (numer x) (denom y))
+            (* (denom x) (numer y))))
+
+;; equality: n1/d1 = n2/d2 , iff n1d2=n2d1
+(define (equal-rat? x y)
+  (= (* (numer x) (denom y))
+     (* (numer y) (denom x))))
+
+
+;; constructor and accessors for rationals, represented as a pair
+(define (make-rat-simple n d) (cons n d))   ;; does not reduce to gcds
+(define (make-rat-gcd n d)  ;; reduces to gcds
+  (let ((g (gcd n d)))
+    (cons (/ n g) (/ d g))))
+(define (numer x) (car x))
+(define (denom x) (cdr x))
+
+
+(define (print-rat x)
+  (newline)
+  (display (numer x))
+  (display "/")
+  (display (denom x)))
+
+
+(define (one-half)
+  (make-rat 1 2))
+
+(define (one-third)
+  (make-rat 1 3))
+
+
+
+;;;;;;;;;;;;;;
+;; Exercise 2.1:
+;; Define a better version of make-rat that handles both positive and negative arguments.
+;; make-rat should normalize the sign so that if the rational number is positive, both the numerator and denominator are positive.
+;; And if the rational number is negative, only the numerator is negative.
+;;;;;;;;;;;;;;
+
+(define (make-rat n d) ;; reduces to gcds and handles negative signs properly
+  (let ((g (gcd n d))) ;; note: changed the previous 'gcd' function to return abs value to make this work.
+    (let ((n-adjusted (if (< d 0) (- n) n))
+          (d-adjusted (if (< d 0) (- d) d)))
+      (cons (/ n-adjusted g) (/ d-adjusted g)))))
+
+
+;; Export functions for testing
+(#%provide add-rat sub-rat mul-rat div-rat equal-rat?
+           make-rat make-rat-gcd make-rat-simple numer denom
+           one-half one-third print-rat
+           gcd
+           make-point x-point y-point print-point
+           make-segment start-segment end-segment midpoint-segment segment-length
+           make-rect-naive left-seg-naive bottom-seg-naive right-seg-naive top-seg-naive
+           perimeter-naive area-naive
+           make-rect rect-origin rect-width rect-height rect-angle area perimeter
+           cons-alt car-alt cdr-alt
+           cons-intpow car-intpow cdr-intpow count-divisions
+           zero-church one-church two-church three-church add-1-church
+           make-interval lower-bound upper-bound add-interval sub-interval mul-interval div-interval
+           interval-width)
+
+
+
+
+;;;;;;;;;
+;; Exercise 2.2:
+;; Consider the problem of representing line segments in a plane. Each segment is represented as a pair of points: a starting point and an ending point.
+;; Define a constructor make-segment and selectors start-segment and end-segment that define the representation of segments in terms of points.
+;; Furthermore, a point can be represented as a pair of numbers: the x coordinate and the y coordinate.
+;; Accordingly, specify a constructor make-point and selectors x-point and y-point that define this representation.
+;; Finally, using your selectors and constructors, define a procedure midpoint-segment that takes
+;;   a line segment as argument and returns its midpoint (the point whose coordinates are the average of the coordinates of the endpoints).
+;; To try your procedures, you’ll need a way to print points.
+;;;;;;;;;
+
+
+(define (print-point p)
+  (newline)
+  (display "(")
+  (display (x-point p))
+  (display ",")
+  (display (y-point p))
+  (display ")"))
+
+(define (make-segment p1 p2)
+  (cons p1 p2))
+(define (start-segment s)
+  (car s))
+(define (end-segment s)
+  (cdr s))
+
+(define (make-point x y)
+  (cons x y))
+(define (x-point p)
+  (car p))
+(define (y-point p)
+  (cdr p))
+
+
+(define (avg a b)
+  (/ (+ a b) 2))
+
+(define (midpoint-segment s)
+  (let ((xm (avg (x-point (start-segment s)) (x-point (end-segment s)))))
+    (let ((ym (avg (y-point (start-segment s)) (y-point (end-segment s)))))
+      (make-point xm ym)
+      )))
+
+
+
+
+;;;;;;;;;
+;; Exercise 2.3:
+;; Implement a representation for rectangles in a plane. (Hint: You might want to make use of Exercise 2.2 .)
+;; In terms of your constructors and selectors, create procedures that compute the perimeter and the area of a given rectangle.
+;; Now implement a different representation for rectangles.
+;; Can you design your system with suitable abstraction barriers so that the same perimeter and area procedures will work using either representation?
+
+
+;; naive representation, a rectangle is 4 lines
+;; returns nested tuples in order of (left line, bottom line, right line, top line)
+;; does not validate the lines actually form a rectangle with perpendicular angles!
+(define (make-rect-naive ll bl rl tl)
+  (cons ll (cons bl (cons rl tl)))
+  )
+(define (left-seg-naive rect)
+  (car rect))
+
+(define (bottom-seg-naive rect)
+  (car (cdr rect)))
+
+(define (right-seg-naive rect)
+  (car (cdr (cdr rect))))
+
+(define (top-seg-naive rect)
+  (cdr (cdr (cdr rect))))
+
+(define (segment-length seg)
+  (let ((dx (- (x-point (end-segment seg))
+               (x-point (start-segment seg)))))
+    (let ((dy (- (y-point (end-segment seg))
+                 (y-point (start-segment seg)))))
+      (sqrt (+ (square dx) (square dy))))))
+
+(define (perimeter-naive rect)
+  (+ (segment-length (left-seg-naive rect)) (segment-length (bottom-seg-naive rect)) (segment-length (right-seg-naive rect)) (segment-length (top-seg-naive rect)))
+  )
+
+(define (area-naive rect)
+  (* (segment-length (left-seg-naive rect)) (segment-length (bottom-seg-naive rect)))
+  )
+
+
+;; Second implementation.
+;; rectangle is represented as: (origin point , width, length, angle of rotation)
+;; Constructor
+(define (make-rect origin-pt width height angle)
+  (cons origin-pt (cons width (cons height angle))))
+
+;; Selectors
+(define (rect-origin rect) (car rect))
+(define (rect-width rect) (car (cdr rect)))
+(define (rect-height rect) (car (cdr (cdr rect))))
+(define (rect-angle rect) (cdr (cdr (cdr rect))))
+
+(define (area rect)
+  (* (rect-width rect) (rect-height rect)))
+
+(define (perimeter rect)
+  (* 2 (+ (rect-width rect) (rect-height rect))))
+
+
+
+;;;;;;;;;;;;
+;; Exercise 2.4
+;; Here is an alternative procedural representation of pairs.
+;; For this representation, verify that (car (cons x y)) yields x for any objects x and y.
+
+(define (cons-alt x y)
+  (lambda (m) (m x y)))
+
+(define (car-alt z)
+  (z (lambda (p q) p)))
+
+;; What is the corresponding definition of cdr? (Hint: To verify that this works, make use of the substitution model of 1.1.5.)
+;;;;;;;;;;;;
+
+(define (cdr-alt z)
+  (z (lambda (p q) q))
+  )
+
+
+
+
+
+;;;;;;;;;;;;
+;; Exercise 2.5
+;; Show that we can represent pairs of nonnegative integers using only numbers and arithmetic operations,
+;; if we represent the pair a and b as the integer that is the product 2^a * 3^b.
+;; Give the corresponding definitions of the procedures cons, car, and cdr.
+
+
+(define (cons-intpow a b)
+  (* (fast-expt-iter 2 a) (fast-expt-iter 3 b))
+  )
+
+
+;; so repeatedly divide by 2 to find the 2 factor, and repeatedly divide by 3 to find the 3 factor.
+(define (count-divisions n divisor)
+  (define (count-divisions-iter n divisor count)
+    (if (= (remainder n divisor) 0)
+        (count-divisions-iter (/ n divisor) divisor (+ count 1))
+        count))
+  (count-divisions-iter n divisor 0)
+  )
+
+
+
+(define (car-intpow p)
+  (count-divisions p 2)
+  )
+
+(define (cdr-intpow p)
+  (count-divisions p 3)
+  )
+
+
+
+
+;;;;;;;;;;;;;;;;;
+;; Exercise 2.6
+;; In case representing pairs as procedures wasn’t mind-boggling enough, consider that, in a language that can manipulate procedures,
+;; we can get by without numbers (at least insofar as nonnegative integers are concerned).
+;; By implementing 0 and the operation of adding 1 as
+(define zero-church (lambda (f) (lambda (x) x)))
+
+(define (add-1-church n)
+  (lambda (f) (lambda (x) (f ((n f) x)))))
+;; This representation is known as Church numeral’s, after its inventor, Alonzo Church, the logician who invented the λ-calculus.
+;; Define one and two directly (not in terms of zero and add-1).
+;; (Hint: Use substitution to evaluate (add-1 zero)).
+;; Give a direct definition of the addition procedure + (not in terms of repeated application of add-1).
+(define one-church (lambda (f) (lambda (x) (f x))))
+(define two-church (lambda (f) (lambda (x) (f(f x)))))
+(define three-church (lambda (f) (lambda (x) (f(f(f x))))))
+
+
+
+
+;;;;;;;;;;;;;;
+;; Exercise 2.7
+;; Alyssa P. Hacker is designing a system to help people solve engineering problems.
+;; One feature she wants to provide in her system is the ability to manipulate inexact quantities (such as measured parameters of physical devices)
+;; Alyssa postulates the existence of an abstract object called an “interval” that has two endpoints: a lower bound and an upper bound.
+;; She also presumes that, given the endpoints of an interval, she can construct the interval using the data constructor make-interval.
+;; Alyssa’s program is incomplete because she has not specified the implementation of the interval abstraction. Here is a definition of the interval constructor:
+(define (make-interval a b) (cons a b))
+;; Define selectors upper-bound and lower-bound to complete the implementation.
+(define (lower-bound i)
+  (car i))
+(define (upper-bound i)
+  (cdr i))
+
+
+;; Existing add/mul/div functions described in the text
+(define (add-interval x y)
+  (make-interval (+ (lower-bound x) (lower-bound y))
+                 (+ (upper-bound x) (upper-bound y))))
+
+(define (mul-interval x y)
+  (let ((p1 (* (lower-bound x) (lower-bound y)))
+        (p2 (* (lower-bound x) (upper-bound y)))
+        (p3 (* (upper-bound x) (lower-bound y)))
+        (p4 (* (upper-bound x) (upper-bound y))))
+    (make-interval (min p1 p2 p3 p4)
+                   (max p1 p2 p3 p4))))
+
+(define (div-interval-spanszero x y)   ;; modified name because ex2.10 improves it.
+  (mul-interval
+   x
+   (make-interval (/ 1.0 (upper-bound y))
+                  (/ 1.0 (lower-bound y)))))
+
+
+
+;;;;;;;;;;;;;
+;; Exercise 2.8
+;; Using reasoning analogous to Alyssa’s, describe how the difference of two intervals may be computed.
+;; Define a corresponding subtraction procedure, called sub-interval.
+;;;;;;;;;;;;;
+(define (sub-interval a b)
+  (make-interval
+     (- (lower-bound a) (upper-bound b))
+     (- (upper-bound a) (lower-bound b))
+ )
+)
+
+
+;;;;;;;;;;;;;
+;; Exercise 2.9
+;; The width of an interval is half of the difference between its upper and lower bounds.
+;; The width is a measure of the uncertainty of the number specified by the interval.
+;; For some arithmetic operations the width of the result of combining two intervals is a function only of the widths of the argument intervals,
+;; whereas for others the width of the combination is not a function of the widths of the argument intervals.
+;; Show that the width of the sum (or difference) of two intervals is a function only of the widths of the intervals being added (or subtracted).
+;; Give examples to show that this is not true for multiplication or division.
+;;;;;;;;;;;;;
+(define (interval-width i)
+  (/ (- (upper-bound i) (lower-bound i)) 2)
+)
+;; unit tests show addition and subtraction of two intervals always adds the widths together
+;; unit tests show that division and multiplication depend on not just the width, but also the actual numerical values of start points and end points.
+
+
+;;;;;;;;;;;;
+;; Exercise 2.10
+;; Ben Bitdiddle, an expert systems programmer, looks over Alyssa’s shoulder and comments that
+;   it is not clear what it means to divide by an interval that spans zero.
+;; Modify Alyssa’s code to check for this condition and to signal an error if it occurs.
+(define (div-interval x y)
+    (define (spans-zero? i)
+	(and
+	  (not (> (lower-bound i) 0))
+          (not (< (upper-bound i) 0))))
+    (if (spans-zero? y)
+	(error "The dividing interval cannot span 0.")
+  (mul-interval
+   x
+   (make-interval (/ 1.0 (upper-bound y))
+                  (/ 1.0 (lower-bound y))))))
 
