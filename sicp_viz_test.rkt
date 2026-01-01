@@ -1,11 +1,9 @@
 #lang sicp
 
-;; Test file for sicp_viz tracing library
-
 (#%require "sicp_viz.rkt")
 
 ;; ============================================================================
-;; Define functions NORMALLY - no special syntax needed!
+;; Test Functions
 ;; ============================================================================
 
 (define (fib n)
@@ -14,57 +12,80 @@
       (+ (fib (- n 1))
          (fib (- n 2)))))
 
-;; ============================================================================
-;; Test 1: Just call (run fib 4) - that's it!
-;; ============================================================================
-
-(display "Test 1: (run fib 4)")
-(newline)
-(newline)
-
-(define tree (run fib 4))
-(print-tree tree)
-
-(newline)
-(display "Actual fib(4) result: ")
-(display (fib 4))
-(newline)
-(newline)
-
-;; ============================================================================
-;; Test 2: Trace a function that calls another function
-;; ============================================================================
-
 (define (sum-fibs n)
   (if (= n 0)
       0
       (+ (fib n) (sum-fibs (- n 1)))))
 
-(display "Test 2: (run sum-fibs 3) - traces sum-fibs calling fib")
+;; ============================================================================
+;; Test 1: Basic tracing of recursive function
+;; ============================================================================
+;; Shows how a simple recursive function forms a call tree
+;; Each fib call appears as a node with its recursive children
+
+(display "Test 1: (run fib 4)")
 (newline)
 (newline)
 
-(define tree2 (run sum-fibs 32))
+(define tree1 (run fib 4))
+(print-tree tree1)
+
+(newline)
+(newline)
+
+;; ============================================================================
+;; Test 2: Function calling other functions
+;; ============================================================================
+;; Shows composition - sum-fibs calls fib multiple times
+;; The traced fib calls appear as children of sum-fibs calls
+
+(display "Test 2: (run sum-fibs 3)")
+(newline)
+(newline)
+
+(define tree2 (run sum-fibs 3))
 (print-tree tree2)
 
 (newline)
+(newline)
 
 ;; ============================================================================
-;; Test 3: Self-composition - trace the tracing itself!
+;; Test 3: Self-composition - tracing the tracer
 ;; ============================================================================
+;; When run-depth > 1, traced-call shows itself in the tree
+;; This makes the tracing machinery itself visible
+;; Outer run traces run-fib-wrapper, inner run traces fib
+;; Both merge into the same call tree
 
-(display "Test 3: Self-composition - (run traced-fib-wrapper)")
-(newline)
-(display "This traces the overhead of the tracing infrastructure itself!")
+(display "Test 3: Nested run calls")
 (newline)
 (newline)
 
-;; Define a function whose job is to run fib
-(define (traced-fib-wrapper)
-  (run fib 3))
+(define (run-fib-wrapper)
+  (run fib 2))
 
-;; Now trace THAT function - shows both layers!
-(define tree3 (run traced-fib-wrapper))
+(define tree3 (run run-fib-wrapper))
 (print-tree tree3)
+
+(newline)
+(newline)
+
+;; ============================================================================
+;; Test 4: Four levels of nested run calls
+;; ============================================================================
+;; Each wrapper adds another layer of run nesting
+;; All traced-call machinery becomes visible at each level
+;; Final tree shows the complete stack of instrumentation
+
+(display "Test 4: Four nested run calls - run(run(run(run(fib(4)))))")
+(newline)
+(newline)
+
+(define (wrapper-1) (run fib 4))
+(define (wrapper-2) (run wrapper-1))
+(define (wrapper-3) (run wrapper-2))
+
+(define tree4 (run wrapper-3))
+(print-tree tree4)
 
 (newline)
